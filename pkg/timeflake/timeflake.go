@@ -5,20 +5,21 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/gioni06/go-timeflake/internal/utils"
-	"github.com/google/uuid"
 	"log"
 	"math/big"
 	"math/rand"
 	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/gioni06/go-timeflake/internal/alphabets"
+	"github.com/gioni06/go-timeflake/internal/utils"
 )
 
 const (
-	BASE62  = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	HEX     = "0123456789abcdef"
-	MAXTS   = "281474976710655"
-	MAXRAND = "1208925819614629174706175"
-	MAXTF   = "340282366920938463463374607431768211455"
+	maxTimestamp = "281474976710655"
+	maxRandom    = "1208925819614629174706175"
+	maxTimeflake = "340282366920938463463374607431768211455"
 )
 
 type Timeflake struct {
@@ -60,7 +61,7 @@ func (f *Timeflake) BigRand() *big.Int {
 func MaxRandom() *big.Int {
 	bufMaxRandom := new(bytes.Buffer)
 	var MaxRandom = big.NewInt(0)
-	MaxRandom.SetString(MAXRAND, 62)
+	MaxRandom.SetString(maxRandom, 62)
 	errMaxRandom := binary.Write(bufMaxRandom, binary.LittleEndian, MaxRandom.Bytes())
 
 	if errMaxRandom != nil {
@@ -72,7 +73,7 @@ func MaxRandom() *big.Int {
 func MaxTimestamp() *big.Int {
 	bufMaxTimestamp := new(bytes.Buffer)
 	var MaxTimestamp = big.NewInt(0)
-	MaxTimestamp.SetString(MAXTS, 10)
+	MaxTimestamp.SetString(maxTimestamp, 10)
 	errMaxTimestamp := binary.Write(bufMaxTimestamp, binary.LittleEndian, MaxTimestamp.Bytes())
 
 	if errMaxTimestamp != nil {
@@ -84,7 +85,7 @@ func MaxTimestamp() *big.Int {
 func MaxTimeflake() *big.Int {
 	bufMaxTimeflake := new(bytes.Buffer)
 	var MaxTimeflake = big.NewInt(0)
-	MaxTimeflake.SetString(MAXTF, 10)
+	MaxTimeflake.SetString(maxTimeflake, 10)
 	errMaxTimeflake := binary.Write(bufMaxTimeflake, binary.LittleEndian, MaxTimeflake.Bytes())
 
 	if errMaxTimeflake != nil {
@@ -118,8 +119,8 @@ func Random() Timeflake {
 	vHex := big.NewInt(0)
 	vHex.SetBytes(randomAndTimestampCombined.Bytes())
 
-	b62, b62Err := utils.Itoa(v62, BASE62, 22)
-	hex, hexErr := utils.Itoa(vHex, HEX, 32)
+	b62, b62Err := utils.BigIntToASCII(v62, alphabets.BASE62, 22)
+	hex, hexErr := utils.BigIntToASCII(vHex, alphabets.HEX, 32)
 
 	if b62Err != nil {
 		log.Panic(b62Err)
@@ -174,8 +175,8 @@ func FromBytes(fromBytes []byte) Timeflake {
 	vHex := big.NewInt(0)
 	vHex.SetBytes(randomAndTimestampCombined.Bytes())
 
-	b62, b62Err := utils.Itoa(v62, BASE62, 22)
-	hex, hexErr := utils.Itoa(vHex, HEX, 32)
+	b62, b62Err := utils.BigIntToASCII(v62, alphabets.BASE62, 22)
+	hex, hexErr := utils.BigIntToASCII(vHex, alphabets.HEX, 32)
 
 	if b62Err != nil {
 		log.Panic(b62Err)
@@ -207,13 +208,13 @@ func FromBytes(fromBytes []byte) Timeflake {
 }
 
 func FromHex(hexValue string) Timeflake {
-	fromBytes := utils.Atoi(hexValue, HEX)
-	return FromBytes(fromBytes.Bytes())
+	bigInt := utils.ASCIIToBigInt(hexValue, alphabets.HEX)
+	return FromBytes(bigInt.Bytes())
 }
 
 func FromBase62(b62 string) Timeflake {
-	fromBytes := utils.Atoi(b62, BASE62)
-	return FromBytes(fromBytes.Bytes())
+	bigInt := utils.ASCIIToBigInt(b62, alphabets.BASE62)
+	return FromBytes(bigInt.Bytes())
 }
 
 type Values interface {

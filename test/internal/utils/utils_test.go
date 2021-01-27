@@ -1,34 +1,38 @@
 package tests
 
 import (
-	"github.com/gioni06/go-timeflake/internal/utils"
-	"github.com/gioni06/go-timeflake/pkg/timeflake"
 	"math/big"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/gioni06/go-timeflake/internal/alphabets"
+	"github.com/gioni06/go-timeflake/internal/utils"
 )
 
-func TestItoa(t *testing.T) {
+func TestBigIntToASCII(t *testing.T) {
 	b1 := big.NewInt(1504324233)
-	res1, _ := utils.Itoa(b1, timeflake.BASE62, 5)
+	res1, _ := utils.BigIntToASCII(b1, alphabets.BASE62, 5)
 
 	if res1 != "01dnzS5" {
 		t.Errorf("expected '01dnzS5' got '%s'", res1)
 	}
 
 	b2 := big.NewInt(1504324233)
-	res2, _ := utils.Itoa(b2, timeflake.HEX, 5)
+	res2, _ := utils.BigIntToASCII(b2, alphabets.HEX, 5)
 
 	if res2 != "059aa2a89" {
 		t.Errorf("expected '059aa2a89' got '%s'", res2)
 	}
 }
 
-func TestMax(t *testing.T) {
-	m := utils.Max(123, 1)
-	if m != 123 {
-		t.Errorf("expected '123' got '%d'", m)
+func TestASCIIToBigInt(t *testing.T) {
+	b := utils.ASCIIToBigInt("8M0kX", alphabets.BASE62)
+
+	a := big.NewInt(123456789)
+
+	if a.Cmp(b) != 0 {
+		t.Error("failed")
 	}
 }
 
@@ -56,29 +60,5 @@ func TestIndexAlphabet(t *testing.T) {
 
 	if !reflect.DeepEqual(m, v) {
 		t.Errorf("resulting map is not correct")
-	}
-}
-
-func TestBigFromStringBase10(t *testing.T) {
-	b, err := utils.BigFromString("123", 10)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	a := big.NewInt(123)
-
-	if a.Cmp(b) != 0 {
-		t.Error("failed")
-	}
-}
-
-func TestBigFromStringBase62(t *testing.T) {
-	b := utils.Atoi("8M0kX", timeflake.BASE62)
-
-	a := big.NewInt(123456789)
-
-	if a.Cmp(b) != 0 {
-		t.Error("failed")
 	}
 }

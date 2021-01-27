@@ -1,16 +1,32 @@
 package tests
 
 import (
-	"github.com/gioni06/go-timeflake/internal/utils"
-	"github.com/gioni06/go-timeflake/pkg/timeflake"
+	"bytes"
+	"encoding/binary"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/gioni06/go-timeflake/pkg/timeflake"
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+}
+
+func bigFromString(s string, base int) (*big.Int, error) {
+	buf := new(bytes.Buffer)
+	var b = big.NewInt(0)
+
+	b.SetString(s, base)
+	err := binary.Write(buf, binary.LittleEndian, b.Bytes())
+
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
 func TestTimeflake(t *testing.T) {
@@ -34,7 +50,7 @@ func TestTimeflake(t *testing.T) {
 
 		zero = new(big.Int)
 		max = timeflake.MaxRandom()
-		r, err := utils.BigFromString(f.Rand(), 10)
+		r, err := bigFromString(f.Rand(), 10)
 
 		if err != nil {
 			t.Error("random part is not a valid number")

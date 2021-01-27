@@ -2,15 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/gioni06/go-timeflake/pkg/timeflake"
 	"math/rand"
 	"reflect"
 	"time"
-)
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+	"github.com/gioni06/go-timeflake/pkg/timeflake"
+)
 
 func main() {
 	f := timeflake.Random()
@@ -40,4 +37,8 @@ func main() {
 	fmt.Printf("d == e => %v\n", reflect.DeepEqual(d, e))
 	fmt.Printf("e == h => %v\n", reflect.DeepEqual(e, h))
 	fmt.Printf("h == i => %v (expect false)\n", reflect.DeepEqual(h, i))
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
