@@ -91,6 +91,7 @@ func MaxTimeflake() *big.Int {
 	if errMaxTimeflake != nil {
 		fmt.Println("binary.Write failed:", errMaxTimeflake)
 	}
+
 	return MaxTimeflake
 }
 
