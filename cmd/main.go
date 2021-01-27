@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/gioni06/go-timeflake/pgk/timeflake"
+	"github.com/gioni06/go-timeflake/pkg/timeflake"
 	"math/rand"
 	"reflect"
 	"time"

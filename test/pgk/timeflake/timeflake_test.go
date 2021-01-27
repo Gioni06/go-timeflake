@@ -2,7 +2,7 @@ package tests
 
 import (
 	"github.com/gioni06/go-timeflake/internal/utils"
-	"github.com/gioni06/go-timeflake/pgk/timeflake"
+	"github.com/gioni06/go-timeflake/pkg/timeflake"
 	"math/big"
 	"math/rand"
 	"testing"
