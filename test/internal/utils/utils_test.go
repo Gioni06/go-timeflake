@@ -25,12 +25,20 @@ func TestBigIntToASCII(t *testing.T) {
 		t.Errorf("expected '059aa2a89' got '%s'", res2)
 	}
 
-
 	b3 := big.NewInt(0)
 	res3, _ := utils.BigIntToASCII(b3, alphabets.HEX, 5)
 
 	if res3 != "0" {
 		t.Errorf("expected '0' got '%s'", res3)
+	}
+}
+
+func TestBigIntToASCIIWithZeroValue(t *testing.T) {
+	b1 := big.NewInt(0)
+	res1, _ := utils.BigIntToASCII(b1, alphabets.BASE62, 5)
+
+	if res1 != "0" {
+		t.Errorf("expected '0' got '%s'", res1)
 	}
 }
 
@@ -48,6 +56,16 @@ func TestASCIIToBigInt(t *testing.T) {
 	a1 := big.NewInt(0)
 
 	if a1.Cmp(b1) != 0 {
+		t.Error("failed")
+	}
+}
+
+func TestASCIIToBigIntWithZeroValue(t *testing.T) {
+	b := utils.ASCIIToBigInt("0", alphabets.BASE62)
+
+	a := big.NewInt(0)
+
+	if a.Cmp(b) != 0 {
 		t.Error("failed")
 	}
 }

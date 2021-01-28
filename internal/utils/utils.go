@@ -19,7 +19,8 @@ func BigIntToASCII(value *big.Int, alphabet string, padding int) (string, error)
 	if v.Cmp(z) == 0 {
 		return alphabetSlice[0], nil
 	}
-	result := ""
+
+	var result string
 
 	for v.Cmp(z) != 0 {
 		rem := big.NewInt(0)

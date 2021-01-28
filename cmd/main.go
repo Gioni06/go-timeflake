@@ -12,19 +12,18 @@ import (
 // There will be a cli interface soon.
 // Right now this is only used for development purpose only.
 func main() {
-	f := timeflake.Random()
+	f, _ := timeflake.Random()
 
-	c := timeflake.FromBytes(f.Bytes)
+	c, _ := timeflake.FromBytes(f.Bytes)
+	d, _ := timeflake.FromHex(f.Hex)
 
-	d := timeflake.FromHex(f.Hex)
-
-	e := timeflake.FromBase62(f.Base62)
+	e, _ := timeflake.FromBase62(f.Base62)
 
 	g := timeflake.NewValues(f.Timestamp(), f.BigRand())
 	g1 := timeflake.NewValues(f.Timestamp(), nil)
 
-	h := timeflake.FromValues(g)
-	h1 := timeflake.FromValues(g1)
+	h, _ := timeflake.FromValues(g)
+	h1, _ := timeflake.FromValues(g1)
 
 	c.Log()
 	f.Log()

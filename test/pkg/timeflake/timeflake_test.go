@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"math/big"
 	"math/rand"
+	"reflect"
 	"testing"
 	"time"
 
@@ -25,12 +26,117 @@ func bigFromString(s string, base int) (*big.Int, error) {
 	return b, nil
 }
 
+func TestTimeflakeCreationFromHex(t *testing.T) {
+	_, err := timeflake.FromHex("0177487ec2f8d0a63f2785a9cadfc50f")
+
+	if err != nil {
+		t.Error("timeflake creation should not fail")
+	}
+}
+
+func TestTimeflakeCreationFromB62(t *testing.T) {
+	_, err := timeflake.FromBase62("02lVIoVLUfN6xUwLlnSRjj")
+
+	if err != nil {
+		t.Error("timeflake creation should not fail")
+	}
+}
+
+func TestTimeflakeValuesInstanceCanBeCreated(t *testing.T) {
+	now := int64(1611829003)
+	v := timeflake.NewValues(now, nil)
+	tf, err := timeflake.FromValues(v)
+
+	if err != nil {
+		t.Error("timeflake creation should not fail")
+	}
+
+	if tf != nil && tf.Timestamp() != now {
+		t.Error("timeflake should have a correct timestamp")
+	}
+
+	if tf != nil && tf.Rand() == "" {
+		t.Error("timeflake should have a random part")
+	}
+
+	if tf != nil && len(tf.BigRand().Bytes()) != 10 {
+		t.Errorf("timeflake random part must be 10 Bytes %d", len(tf.BigRand().Bytes()))
+	}
+}
+
+func TestTimeflakeCreationFromValuesFails(t *testing.T) {
+	now := int64(0)
+	randString := "0"
+	random, _ := bigFromString(randString, 10)
+
+	v := timeflake.NewValues(now, random)
+	_, err := timeflake.FromValues(v)
+
+	if err == nil {
+		t.Error("timeflake creation should fail")
+	}
+}
+
+// Creates a Timeflake from fixed values and makes assertions.
+func TestTimeflakeInstance(t *testing.T) {
+	now := int64(1611829003)
+	randString := "985318938706034770822415"
+	random, _ := bigFromString(randString, 10)
+
+	v := timeflake.NewValues(now, random)
+	tf, err := timeflake.FromValues(v)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	expectedInt, _ := bigFromString("1948581698531390905820074514793350415", 10)
+	if tf.Int.Cmp(expectedInt) != 0 {
+		t.Errorf("timeflake Int is not correct. %s != %s", tf.Int.String(), expectedInt.String())
+	}
+
+	expectedBigRandom := new(big.Int)
+	expectedBigRandom.SetBytes(random.Bytes())
+	if tf.BigRand().Cmp(expectedBigRandom) != 0 {
+		t.Errorf("timeflake BigRandom is not correct. %s != %s", tf.BigRand().String(), expectedBigRandom.String())
+	}
+
+	if tf.Rand() != randString {
+		t.Errorf("timeflake random part is not correct. %s != %s", tf.Rand(), randString)
+	}
+
+	if tf.Timestamp() != now {
+		t.Errorf("timeflake timestamp is not correct. %d != %d", tf.Timestamp(), now)
+	}
+
+	expectedB62 := "02lVIoVLUfN6xUwLlnSRjj"
+	if tf.Base62 != expectedB62 {
+		t.Errorf("timeflake B62 is not correct. %s != %s", tf.Base62, expectedB62)
+	}
+
+	expectedHEX := "0177487ec2f8d0a63f2785a9cadfc50f"
+	if tf.Hex != expectedHEX {
+		t.Errorf("timeflake HEX is not correct. %s != %s", tf.Hex, expectedHEX)
+	}
+
+	expectedBytes := make([]byte, 16)
+	expectedBytes = append(expectedBytes, 1, 119, 72, 126, 194, 248, 208, 166, 63, 39, 133, 169, 202, 223, 197, 15)
+	if reflect.DeepEqual(tf.Bytes, expectedBytes) {
+		t.Errorf("timeflake Bytes is not correct. %s != %s", tf.Bytes, expectedBytes)
+	}
+
+	expectedUUID := "0177487e-c2f8-d0a6-3f27-85a9cadfc50f"
+	if tf.UUID != expectedUUID {
+		t.Errorf("timeflake Int is not correct. %s != %s", tf.UUID, expectedUUID)
+	}
+}
+
 // Run some sanity checks that ensure the overall correctness
 // of the created Timeflakes.
 func TestTimeflake(t *testing.T) {
 	now := (time.Now()).Unix()
 	for range make([]int, 1000) {
-		f := timeflake.Random()
+		f, _ := timeflake.Random()
 
 		zero := new(big.Int)
 		max := timeflake.MaxTimeflake()
@@ -94,14 +200,20 @@ func TestTimeflake(t *testing.T) {
 func TestRandomnessOfTimeflakes(t *testing.T) {
 	const numJobs = 1e6
 	jobs := make(chan int, numJobs)
-	results := make(chan timeflake.Timeflake, numJobs)
+	results := make(chan *timeflake.Timeflake, numJobs)
 
 	var seen = make(map[string]int)
 
 	for i := 0; i < 100; i++ {
-		go func(j <-chan int, r chan<- timeflake.Timeflake) {
+		go func(j <-chan int, r chan<- *timeflake.Timeflake) {
 			for range j {
-				f := timeflake.Random()
+				f, err := timeflake.Random()
+				if err != nil {
+					close(jobs)
+					close(results)
+					t.Error("Timeflake creation failed")
+					break
+				}
 				r <- f
 			}
 		}(jobs, results)
