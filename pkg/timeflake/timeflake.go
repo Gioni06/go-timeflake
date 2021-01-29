@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/gioni06/go-timeflake/internal/alphabets"
+	"github.com/gioni06/go-timeflake/internal/customerr"
 	"github.com/gioni06/go-timeflake/internal/utils"
 )
 
@@ -20,8 +21,6 @@ const (
 	maxRandom    = "1208925819614629174706175"
 	maxTimeflake = "340282366920938463463374607431768211455"
 )
-
-var OutOfBoundsError = errors.New("the parameter 'fromBytes' must be 16 Bytes")
 
 type Timeflake struct {
 	Base62 string
@@ -33,16 +32,13 @@ type Timeflake struct {
 }
 
 func (f *Timeflake) Log() {
-	fmt.Println("===Timeflake===")
-	fmt.Printf("Timestamp: %d\n", f.Timestamp())
-	fmt.Printf("Random: %s\n", f.BigRand().String())
-	fmt.Printf("Base62: %s\n", f.Base62)
-	fmt.Printf("Hex: %s\n", f.Hex)
-	fmt.Printf("Bytes: %v\n", f.Bytes)
-	fmt.Printf("Integer: %s\n", f.Int.String())
-	fmt.Printf("UUID: %s\n", f.UUID)
-	fmt.Println("")
-	fmt.Println("")
+	fmt.Printf("ts=%d\trand=%s\tint=%s\thex=%s\tbase62=%s\t\n",
+		f.Timestamp(),
+		f.BigRand().String(),
+		f.Int.String(),
+		f.Hex,
+		f.Base62,
+	)
 }
 
 // calculate and return the internal timestamp from big.Int
@@ -152,9 +148,12 @@ func Random() (*Timeflake, error) {
 }
 
 func FromBytes(fromBytes []byte) (*Timeflake, error) {
-
+	const op = "timeflake:FromBytes"
 	if len(fromBytes) != 16 {
-		return nil, OutOfBoundsError
+		return nil, &customerr.OutOfBoundsError{
+			Err: errors.New("fromBytes must be 16 Bytes"),
+			Op:  op,
+		}
 	}
 
 	bigTimestamp := new(big.Int)
@@ -182,16 +181,25 @@ func FromBytes(fromBytes []byte) (*Timeflake, error) {
 	hex, hexErr := utils.BigIntToASCII(vHex, alphabets.HEX, 32)
 
 	if b62Err != nil {
-		return nil, b62Err
+		return nil, &customerr.ConversionError{
+			Err: errors.New("conversion to BASE62 failed"),
+			Op:  op,
+		}
 	}
 	if hexErr != nil {
-		return nil, hexErr
+		return nil, &customerr.ConversionError{
+			Err: errors.New("conversion to HEX failed"),
+			Op:  op,
+		}
 	}
 
 	u, UUIDErr := uuid.FromBytes(randomAndTimestampCombined.Bytes())
 
 	if UUIDErr != nil {
-		return nil, UUIDErr
+		return nil, &customerr.UUIDError{
+			Err: errors.New("UUID generation failed"),
+			Op:  op,
+		}
 	}
 
 	f := Timeflake{

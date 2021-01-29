@@ -3,41 +3,40 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"reflect"
 	"time"
 
-	"github.com/gioni06/go-timeflake/pkg/timeflake"
+	"github.com/jaffee/commandeer"
+
+	"github.com/gioni06/go-timeflake/internal/customerr"
 )
 
-// There will be a cli interface soon.
-// Right now this is only used for development purpose only.
+var (
+	Red    = Color("\033[1;31m%s\033[0m")
+	Yellow = Color("\033[1;33m%s\033[0m")
+)
+
+func Color(colorString string) func(...interface{}) string {
+	sprint := func(args ...interface{}) string {
+		return fmt.Sprintf(colorString,
+			fmt.Sprint(args...))
+	}
+	return sprint
+}
+
 func main() {
-	f, _ := timeflake.Random()
-
-	c, _ := timeflake.FromBytes(f.Bytes)
-	d, _ := timeflake.FromHex(f.Hex)
-
-	e, _ := timeflake.FromBase62(f.Base62)
-
-	g := timeflake.NewValues(f.Timestamp(), f.BigRand())
-	g1 := timeflake.NewValues(f.Timestamp(), nil)
-
-	h, _ := timeflake.FromValues(g)
-	h1, _ := timeflake.FromValues(g1)
-
-	c.Log()
-	f.Log()
-	d.Log()
-	e.Log()
-	h.Log()
-	h1.Log()
-
-	fmt.Println("===Timeflake Comparison===")
-	fmt.Printf("c == f => %v\n", reflect.DeepEqual(c, f))
-	fmt.Printf("f == d => %v\n", reflect.DeepEqual(f, d))
-	fmt.Printf("d == e => %v\n", reflect.DeepEqual(d, e))
-	fmt.Printf("e == h => %v\n", reflect.DeepEqual(e, h))
-	fmt.Printf("h == h1 => %v (expect false)\n", reflect.DeepEqual(h, h1))
+	err := commandeer.Run(NewMain())
+	if err != nil {
+		switch err.(type) {
+		case *customerr.OutOfBoundsError:
+			fmt.Printf(Yellow("%s, try again using a smaller random part\n"), err.Error())
+		case *customerr.ConversionError:
+			fmt.Printf(Yellow("%s, converting the inputs to a timeflake failed\n"), err.Error())
+		case *customerr.UUIDError:
+			fmt.Printf(Yellow("%s, the timeflake can not be converted to a valid uuid\n"), err.Error())
+		default:
+			fmt.Println(Red(err.Error()))
+		}
+	}
 }
 
 func init() {
