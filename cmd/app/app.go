@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"errors"
@@ -17,7 +17,9 @@ type Main struct {
 	Timestamp  int64  `flag:"t" help:"A Unix timestamp"`
 }
 
-func NewMain() *Main { return &Main{Values: false, RandomPart: "", Random: false, Number: 1} }
+func NewMain() *Main {
+	return &Main{Values: false, RandomPart: "", Random: false, Number: 1}
+}
 
 func (m *Main) Run() error {
 	if m.About {
@@ -44,22 +46,21 @@ func (m *Main) Run() error {
 				return errors.New("can not parse random number")
 			}
 			v := timeflake.NewValues(m.Timestamp, r)
+
 			tf, err = timeflake.FromValues(v)
 			if err != nil {
 				return err
-			} else {
-				tf.Log()
-				return nil
 			}
+			tf.Log()
+			return nil
 		} else {
 			v := timeflake.NewValues(m.Timestamp, nil)
 			tf, err = timeflake.FromValues(v)
 			if err != nil {
 				return err
-			} else {
-				tf.Log()
-				return nil
 			}
+			tf.Log()
+			return nil
 		}
 	}
 	return nil

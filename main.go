@@ -7,15 +7,16 @@ import (
 
 	"github.com/jaffee/commandeer"
 
+	"github.com/gioni06/go-timeflake/cmd/app"
 	"github.com/gioni06/go-timeflake/internal/customerr"
 )
 
 var (
-	Red    = Color("\033[1;31m%s\033[0m")
-	Yellow = Color("\033[1;33m%s\033[0m")
+	Red    = color("\033[1;31m%s\033[0m")
+	Yellow = color("\033[1;33m%s\033[0m")
 )
 
-func Color(colorString string) func(...interface{}) string {
+func color(colorString string) func(...interface{}) string {
 	sprint := func(args ...interface{}) string {
 		return fmt.Sprintf(colorString,
 			fmt.Sprint(args...))
@@ -24,7 +25,7 @@ func Color(colorString string) func(...interface{}) string {
 }
 
 func main() {
-	err := commandeer.Run(NewMain())
+	err := commandeer.Run(app.NewMain())
 	if err != nil {
 		switch err.(type) {
 		case *customerr.OutOfBoundsError:
