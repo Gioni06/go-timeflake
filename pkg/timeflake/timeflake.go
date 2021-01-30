@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math/big"
 	"math/rand"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/gioni06/go-timeflake/internal/alphabets"
+	"github.com/gioni06/go-timeflake/internal/customerr"
 	"github.com/gioni06/go-timeflake/internal/utils"
 )
 
@@ -32,28 +32,28 @@ type Timeflake struct {
 }
 
 func (f *Timeflake) Log() {
-	fmt.Println("===Timeflake===")
-	fmt.Printf("Timestamp: %d\n", f.Timestamp())
-	fmt.Printf("Random: %s\n", f.BigRand().String())
-	fmt.Printf("Base62: %s\n", f.Base62)
-	fmt.Printf("Hex: %s\n", f.Hex)
-	fmt.Printf("Bytes: %v\n", f.Bytes)
-	fmt.Printf("Integer: %s\n", f.Int.String())
-	fmt.Printf("UUID: %s\n", f.UUID)
-	fmt.Println("")
-	fmt.Println("")
+	fmt.Printf("ts=%d\trand=%s\tint=%s\thex=%s\tbase62=%s\t\n",
+		f.Timestamp(),
+		f.BigRand().String(),
+		f.Int.String(),
+		f.Hex,
+		f.Base62,
+	)
 }
 
+// calculate and return the internal timestamp from big.Int
 func (f *Timeflake) Timestamp() int64 {
 	t := new(big.Int)
 	t.Rsh(&f.Int, 80)
 	return t.Int64() / 1000
 }
 
+// return the random part of the Timeflake as a string
 func (f *Timeflake) Rand() string {
 	return f.rand.String()
 }
 
+// return the random part of the Timeflake as big.Int
 func (f *Timeflake) BigRand() *big.Int {
 	return &f.rand
 }
@@ -95,7 +95,7 @@ func MaxTimeflake() *big.Int {
 	return MaxTimeflake
 }
 
-func Random() Timeflake {
+func Random() (*Timeflake, error) {
 	now := time.Now()
 	timestamp := now.Unix()
 
@@ -124,16 +124,16 @@ func Random() Timeflake {
 	hex, hexErr := utils.BigIntToASCII(vHex, alphabets.HEX, 32)
 
 	if b62Err != nil {
-		log.Panic(b62Err)
+		return nil, b62Err
 	}
 	if hexErr != nil {
-		log.Panic(hexErr)
+		return nil, hexErr
 	}
 
-	u, err := uuid.FromBytes(randomAndTimestampCombined.Bytes())
+	u, UUIDErr := uuid.FromBytes(randomAndTimestampCombined.Bytes())
 
-	if err != nil {
-		log.Panic(err)
+	if UUIDErr != nil {
+		return nil, UUIDErr
 	}
 
 	f := Timeflake{
@@ -144,16 +144,17 @@ func Random() Timeflake {
 		Int:    *randomAndTimestampCombined,
 		rand:   *randomPart,
 	}
-
-	validationError := validate(&f)
-	if validationError != nil {
-		log.Panic(validationError)
-	}
-
-	return f
+	return &f, nil
 }
 
-func FromBytes(fromBytes []byte) Timeflake {
+func FromBytes(fromBytes []byte) (*Timeflake, error) {
+	const op = "timeflake:FromBytes"
+	if len(fromBytes) != 16 {
+		return nil, &customerr.OutOfBoundsError{
+			Err: errors.New("fromBytes must be 16 Bytes"),
+			Op:  op,
+		}
+	}
 
 	bigTimestamp := new(big.Int)
 	bigTimestamp.SetBytes(fromBytes[0:6])
@@ -180,16 +181,25 @@ func FromBytes(fromBytes []byte) Timeflake {
 	hex, hexErr := utils.BigIntToASCII(vHex, alphabets.HEX, 32)
 
 	if b62Err != nil {
-		log.Panic(b62Err)
+		return nil, &customerr.ConversionError{
+			Err: errors.New("conversion to BASE62 failed"),
+			Op:  op,
+		}
 	}
 	if hexErr != nil {
-		log.Panic(hexErr)
+		return nil, &customerr.ConversionError{
+			Err: errors.New("conversion to HEX failed"),
+			Op:  op,
+		}
 	}
 
-	u, err := uuid.FromBytes(randomAndTimestampCombined.Bytes())
+	u, UUIDErr := uuid.FromBytes(randomAndTimestampCombined.Bytes())
 
-	if err != nil {
-		log.Panic(err)
+	if UUIDErr != nil {
+		return nil, &customerr.UUIDError{
+			Err: errors.New("UUID generation failed"),
+			Op:  op,
+		}
 	}
 
 	f := Timeflake{
@@ -201,19 +211,15 @@ func FromBytes(fromBytes []byte) Timeflake {
 		rand:   *randomPart,
 	}
 
-	validationError := validate(&f)
-	if validationError != nil {
-		log.Panic(validationError)
-	}
-	return f
+	return &f, nil
 }
 
-func FromHex(hexValue string) Timeflake {
+func FromHex(hexValue string) (*Timeflake, error) {
 	bigInt := utils.ASCIIToBigInt(hexValue, alphabets.HEX)
 	return FromBytes(bigInt.Bytes())
 }
 
-func FromBase62(b62 string) Timeflake {
+func FromBase62(b62 string) (*Timeflake, error) {
 	bigInt := utils.ASCIIToBigInt(b62, alphabets.BASE62)
 	return FromBytes(bigInt.Bytes())
 }
@@ -249,7 +255,7 @@ func NewValues(timestamp int64, random *big.Int) Values {
 	return &valuesParam{timestamp, random} // enforce the default value here
 }
 
-func FromValues(v Values) Timeflake {
+func FromValues(v Values) (*Timeflake, error) {
 
 	timestamp := v.Timestamp()
 
@@ -261,23 +267,4 @@ func FromValues(v Values) Timeflake {
 	//Mix with random number
 	randomAndTimestampCombined := timestampPart.Or(timestampPart, v.Random())
 	return FromBytes(randomAndTimestampCombined.Bytes())
-}
-
-func validate(flake *Timeflake) error {
-
-	i := big.NewInt(0)
-	i.SetBytes(flake.Int.Bytes())
-
-	i2 := big.NewInt(0)
-	i2.SetBytes(flake.Int.Bytes())
-
-	zero := big.NewInt(0)
-	max := MaxTimeflake()
-	iLessZero := i.Cmp(zero) == -1
-	iSmallerMaxTimeflake := max.Cmp(i2) == -1
-
-	if iLessZero || iSmallerMaxTimeflake {
-		return errors.New("invalid flake provided")
-	}
-	return nil
 }
